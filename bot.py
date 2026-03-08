@@ -7,7 +7,8 @@ import asyncio
 TOKEN = os.getenv('DISCORD_TOKEN')
 
 intents = discord.Intents.default()
-intents.messages = True
+intents.message_content = True
+intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 active_nags = {}
