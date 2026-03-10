@@ -120,6 +120,11 @@ async def on_message(message):
             )
 
             await message.channel.send(summary)
+
+            await asyncio.sleep(60)
+
+            if isinstance(message.channel, discord.Thread):
+                await message.channel.delete()
             return
 
         if looks_like_question(content):
