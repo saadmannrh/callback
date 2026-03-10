@@ -1,6 +1,7 @@
 import json
 import os
 
+import shutil
 import discord
 from discord.ext import tasks, commands
 import asyncio
@@ -13,6 +14,12 @@ DATA_FILE = os.path.join(DATA_DIR,'tasks.json')
 
 if not os.path.exists(DATA_FILE):
     os.makedirs(DATA_DIR)
+
+LOCAL_FILE = 'tasks.json'
+
+if not os.path.exists(DATA_FILE) and os.path.exists(LOCAL_FILE):
+    print(f"Migration: Copying {LOCAL_FILE} to {DATA_FILE}")
+    shutil.copy2(LOCAL_FILE, DATA_FILE)
 
 intents = discord.Intents.default()
 intents.message_content = True
