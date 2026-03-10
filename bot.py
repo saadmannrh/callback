@@ -7,7 +7,12 @@ import asyncio
 from groq_handler import ask_llm
 
 TOKEN = os.getenv('DISCORD_TOKEN')
-DATA_FILE = 'tasks.json'
+
+DATA_DIR = '/app/data'
+DATA_FILE = os.path.join(DATA_DIR,'tasks.json')
+
+if not os.path.exists(DATA_FILE):
+    os.makedirs(DATA_DIR)
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -87,7 +92,7 @@ async def new_task(ctx, member: discord.Member, *, task: str):
         f"👤 **Assignee:** {member.mention}\n\n"
         f"📋 **Details:**\n{task_details}\n\n"
         "Use **!help_me ** if you need guidance.\n"
-        "I will nag you every 6 hours."
+        "I will nag you every 6 hours. To stop me, type **'task complete'** in this thread."
     )
 
     await thread.send(welcome_msg)
@@ -116,7 +121,8 @@ async def on_message(message):
             summary = (
                 f"✅ **Mission Accomplished!**\n"
                 f"The task '{task_data['task']}' is finished.\n"
-                f"It only took {task_data['nag_count']} nags."
+                f"It only took {task_data['nag_count']} nags. \n"
+                "I will nag you every 6 hours. To stop me, type **'task complete'** in this thread."
             )
 
             await message.channel.send(summary)
