@@ -215,6 +215,6 @@ async def help_me(ctx):
     await thinking.edit(content=chunks[0])
 
     for chunk in chunks[1:]:
-        ctx.send(chunk)
+        await ctx.send(chunk)
 
 bot.run(TOKEN)
