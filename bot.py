@@ -46,7 +46,7 @@ def looks_like_question(text):
         "what", "why", "how", "help", "explain",
         "segmentation fault", "pointer", "memory",
         "linked list", "struct", "null", "bug",
-        "error", "not working"
+        "error", "not working", "callback"
     ]
 
     text = text.lower()
