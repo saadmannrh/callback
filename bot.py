@@ -174,6 +174,7 @@ async def nag_loop():
         now_ms = int(time.time() * 1000)
 
         if last_nagged_at is None:
+            last_nagged_at = 0
             data['last_nagged_at'] = 0
             save_data(active_tasks)
 
