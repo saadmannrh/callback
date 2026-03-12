@@ -1,7 +1,7 @@
 import json
 import os
+import time
 
-import shutil
 import discord
 from discord.ext import tasks, commands
 import asyncio
@@ -9,17 +9,13 @@ from groq_handler import ask_llm
 
 TOKEN = os.getenv('DISCORD_TOKEN')
 
-DATA_DIR = '/app/data'
+DATA_DIR = 'data'
 DATA_FILE = os.path.join(DATA_DIR,'tasks.json')
+
 
 if not os.path.exists(DATA_FILE):
     os.makedirs(DATA_DIR)
 
-LOCAL_FILE = 'tasks.json'
-
-if not os.path.exists(DATA_FILE) and os.path.exists(LOCAL_FILE):
-    print(f"Migration: Copying {LOCAL_FILE} to {DATA_FILE}")
-    shutil.copy2(LOCAL_FILE, DATA_FILE)
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -64,6 +60,11 @@ def looks_like_question(text):
 
     return False
 
+async def send_message_in_chunks(ctx, msg):
+    chunks = [msg[i:i + 1900] for i in range(0, len(msg), 1900)]
+
+    for chunk in chunks:
+        await ctx.send(chunk)
 
 @bot.event
 async def on_ready():
@@ -84,12 +85,17 @@ async def new_task(ctx, member: discord.Member, *, task: str):
         auto_archive_duration=10080
     )
 
+    task_started_at = time.time() * 1000
+    last_nagged_at = task_started_at
+
     active_tasks[str(thread.id)] = {
         "user_id": member.id,
         "task": task_title,
         "details": task_details,
         "nag_count": 0,
-        "is_nagging": True
+        "is_nagging": True,
+        "task_started_at": task_started_at,
+        "last_nagged_at":last_nagged_at
     }
 
     save_data(active_tasks)
@@ -129,7 +135,6 @@ async def on_message(message):
                 f"✅ **Mission Accomplished!**\n"
                 f"The task '{task_data['task']}' is finished.\n"
                 f"It only took {task_data['nag_count']} nags. \n"
-                "I will nag you every 6 hours. To stop me, type **'task complete'** in this thread."
             )
 
             await message.channel.send(summary)
@@ -153,29 +158,48 @@ async def on_message(message):
                 print(e)
                 return
 
-            if len(answer) > 1900:
-                answer = answer[:1900]
-
-            await message.channel.send(answer)
+            await send_message_in_chunks(message.channel, answer)
 
     await bot.process_commands(message)
 
 
-@tasks.loop(hours=6)
+@tasks.loop(minutes=1)
 async def nag_loop():
     for thread_id_str, data in list(active_tasks.items()):
         if not data.get("is_nagging", False):
             continue
 
+        thresh_hold = 1000 * 60 * 60 * 6 # 6 hours
+        last_nagged_at = data.get("last_nagged_at")
+        now_ms = int(time.time() * 1000)
+
+        if last_nagged_at is None:
+            data['last_nagged_at'] = 0
+            save_data(active_tasks)
+
+        if now_ms - last_nagged_at < thresh_hold:
+            continue
+
         thread = bot.get_channel(int(thread_id_str))
+
+        if not thread:
+            try:
+                thread = await bot.fetch_channel(int(thread_id_str))
+            except discord.NotFound:
+                del active_tasks[thread_id_str]
+                save_data(active_tasks)
+                continue
+
         if thread:
             data['nag_count'] += 1
-            save_data(active_tasks)  # Save the updated nag count
+            data['last_nagged_at'] = now_ms
+            save_data(active_tasks)
 
             user_mention = f"<@{data['user_id']}>"
             await thread.send(
                 f"⏰ **NAG #{data['nag_count']}**\n"
-                f"Hey {user_mention}, where's the update on **{data['task']}**?"
+                f"Hey {user_mention}, where's the update on **{data['task']}**? \n"
+                "I will nag you every 6 hours. To stop me, type **'task complete'** in this thread."
             )
 
 
@@ -227,12 +251,6 @@ async def help_me(ctx):
         await thinking.edit(content="AI failed to respond.")
         return
 
-    chunks = [answer[i:i+1900] for i in range(0, len(answer), 1900)]
-
-
-    await thinking.edit(content=chunks[0])
-
-    for chunk in chunks[1:]:
-        await ctx.send(chunk)
+    await send_message_in_chunks(ctx, answer)
 
 bot.run(TOKEN)
