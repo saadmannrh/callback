@@ -206,12 +206,14 @@ async def nag_loop():
 
 @bot.command()
 async def status(ctx):
-    if not active_tasks:
+    nagging_tasks = {tid: data for tid, data in active_tasks.items() if data.get("is_nagging")}
+
+    if not nagging_tasks:
         await ctx.send("No active tasks. Everyone is slacking.")
         return
 
     report = "**Current Task Status:**\n"
-    for tid, data in active_tasks.items():
+    for tid, data in nagging_tasks.items():
         report += f"• {data['task']} (Assignee: <@{data['user_id']}>) - Nagged {data['nag_count']} times.\n"
     await ctx.send(report)
 
