@@ -200,7 +200,8 @@ async def nag_loop():
             await thread.send(
                 f"⏰ **NAG #{data['nag_count']}**\n"
                 f"Hey {user_mention}, where's the update on **{data['task']}**? \n"
-                "I will nag you every 6 hours. To stop me, type **'task complete'** in this thread."
+                "I will nag you every 6 hours. To stop me, type **'task complete'** in this thread. \n"
+                "If you need any help just ask me in this thread."
             )
 
 
