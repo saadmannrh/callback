@@ -13,7 +13,7 @@ DATA_DIR = 'data'
 DATA_FILE = os.path.join(DATA_DIR,'tasks.json')
 
 
-if not os.path.exists(DATA_FILE):
+if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
 
 
@@ -172,6 +172,8 @@ async def nag_loop():
         thresh_hold = 1000 * 60 * 60 * 6 # 6 hours
         last_nagged_at = data.get("last_nagged_at")
         now_ms = int(time.time() * 1000)
+
+        print(f"Checking task {data['task']}: Last nagged {(now_ms - last_nagged_at)//(1000*60)} min ago ")
 
         if last_nagged_at is None:
             last_nagged_at = 0
