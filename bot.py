@@ -46,7 +46,7 @@ def looks_like_question(text):
         "what", "why", "how", "help", "explain",
         "segmentation fault", "pointer", "memory",
         "linked list", "struct", "null", "bug",
-        "error", "not working", "callback"
+        "error", "not working", "callback", "can"
     ]
 
     text = text.lower()
@@ -59,6 +59,18 @@ def looks_like_question(text):
             return True
 
     return False
+
+
+async def answer_question(ctx, question, details):
+    await ctx.typing()
+
+    try:
+        answer = await ask_llm(question=question, task_details=details)
+    except Exception as e:
+        print(e)
+        return
+
+    await send_message_in_chunks(ctx, answer)
 
 async def send_message_in_chunks(ctx, msg):
     chunks = [msg[i:i + 1900] for i in range(0, len(msg), 1900)]
@@ -80,10 +92,14 @@ async def new_task(ctx, member: discord.Member, *, task: str):
     task_title = parts[0].strip()
     task_details = parts[1].strip() if len(parts) > 1 else ""
 
-    thread = await ctx.message.create_thread(
-        name=f"Task: {task_title}",
-        auto_archive_duration=10080
-    )
+    try:
+        thread = await ctx.message.create_thread(
+            name= task_title,
+            auto_archive_duration=10080
+        )
+    except Exception as e:
+        print(f"Something went wrong while creating thread: {e}")
+        return
 
     task_started_at = time.time() * 1000
     last_nagged_at = task_started_at
@@ -109,7 +125,6 @@ async def new_task(ctx, member: discord.Member, *, task: str):
     )
 
     await thread.send(welcome_msg)
-    await ctx.send(f"Tracking initiated in {thread.mention}")
 
 
 @bot.event
@@ -119,10 +134,12 @@ async def on_message(message):
         return
 
     channel_id_str = str(message.channel.id)
+    content = message.content.lower()
+
+    if looks_like_question(content):
+       await answer_question(ctx=message.channel, question=content, details=None)
 
     if channel_id_str in active_tasks:
-
-        content = message.content.lower()
 
         if "task complete" in content:
 
@@ -150,15 +167,7 @@ async def on_message(message):
             task_data = active_tasks[channel_id_str]
             task_details = task_data["details"]
 
-            await message.channel.typing()
-
-            try:
-                answer = await ask_llm(task_details, message.content)
-            except Exception as e:
-                print(e)
-                return
-
-            await send_message_in_chunks(message.channel, answer)
+            await answer_question(message.channel, content, task_details)
 
     await bot.process_commands(message)
 
@@ -235,28 +244,11 @@ async def help_me(ctx):
 
     thinking = await ctx.send("🤖 Reviewing the task...")
 
-    prompt = f"""
-        Explain the following programming task to a beginner and suggest how they should start implementing it.
-        
-        TASK TITLE:
-        {title}
-        
-        TASK DETAILS:
-        {details}
-        
-        Explain:
-        1. What the task means
-        2. Key concepts needed
-        3. How they should approach implementing it
-        """
-
     try:
-        answer = await ask_llm("", prompt)
+       await answer_question(ctx=ctx, question=title, details=details)
     except Exception as e:
         print(e)
-        await thinking.edit(content="AI failed to respond.")
+        await thinking.edit(content="Callback failed to respond.")
         return
-
-    await send_message_in_chunks(ctx, answer)
 
 bot.run(TOKEN)

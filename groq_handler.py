@@ -3,7 +3,29 @@ import aiohttp
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-async def ask_llm(task_details, question):
+
+async def ask_llm(question, task_details):
+    task_details_str = "" if task_details is None or task_details == "" else f"task_details:{task_details}"
+    system_prompt = f"""
+    You are a discord bot named callback. Your developer is Saadman Shoumik.    
+    You will work as the programming mentor helping beginner and intermediate developers.
+
+    Your subordinate is working on this task:
+
+    {task_details_str}
+
+    Rules:
+    - explain in depth
+    - explain the low level concepts
+    - c is the default language
+    - give examples
+    - avoid unnecessary complexity
+    """
+
+    reply = await prompt_llm(system_prompt, question)
+    return reply
+
+async def prompt_llm(system_prompt, question):
 
     url = "https://api.groq.com/openai/v1/chat/completions"
 
@@ -11,21 +33,6 @@ async def ask_llm(task_details, question):
         "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json"
     }
-
-    system_prompt = f"""
-You are a senior programming mentor helping beginner developers.
-
-The student is working on this task:
-
-TASK DETAILS:
-{task_details}
-
-Rules:
-- explain in depth
-- give examples
-- avoid unnecessary complexity
-- assume the user is new to programming
-"""
 
     payload = {
         "model": "llama-3.1-8b-instant",
