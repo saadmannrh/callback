@@ -12,6 +12,7 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 DATA_DIR = 'data'
 DATA_FILE = os.path.join(DATA_DIR,'tasks.json')
 
+bot_help_channel = 1483870870886813696
 
 if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
@@ -61,8 +62,11 @@ def looks_like_question(text):
     return False
 
 
-async def answer_question(ctx, question, details):
-    await ctx.typing()
+async def answer_question(msg, question, details):
+    await msg.channel.typing()
+
+    print(f"Question: " + question)
+    print(f"Asked by: " + msg.author.display_name)
 
     try:
         answer = await ask_llm(question=question, task_details=details)
@@ -70,13 +74,13 @@ async def answer_question(ctx, question, details):
         print(e)
         return
 
-    await send_message_in_chunks(ctx, answer)
+    await send_message_in_chunks(msg, answer)
 
-async def send_message_in_chunks(ctx, msg):
-    chunks = [msg[i:i + 1900] for i in range(0, len(msg), 1900)]
+async def send_message_in_chunks(msg, text):
+    chunks = [text[i:i + 1900] for i in range(0, len(text), 1900)]
 
     for chunk in chunks:
-        await ctx.send(chunk)
+        await (msg.channel.send(chunk))
 
 @bot.event
 async def on_ready():
@@ -136,8 +140,10 @@ async def on_message(message):
     channel_id_str = str(message.channel.id)
     content = message.content.lower()
 
-    if looks_like_question(content):
-       await answer_question(ctx=message.channel, question=content, details=None)
+    if (looks_like_question(content) or message.channel.id == bot_help_channel
+            or isinstance(message.channel,discord.DMChannel)):
+
+       await answer_question(msg=message, question=content, details=None)
 
     if channel_id_str in active_tasks:
 
@@ -167,7 +173,7 @@ async def on_message(message):
             task_data = active_tasks[channel_id_str]
             task_details = task_data["details"]
 
-            await answer_question(message.channel, content, task_details)
+            await answer_question(message, content, task_details)
 
     await bot.process_commands(message)
 
@@ -245,7 +251,7 @@ async def help_me(ctx):
     thinking = await ctx.send("🤖 Reviewing the task...")
 
     try:
-       await answer_question(ctx=ctx, question=title, details=details)
+       await answer_question(msg=ctx.message, question=title, details=details)
     except Exception as e:
         print(e)
         await thinking.edit(content="Callback failed to respond.")
