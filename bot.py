@@ -120,16 +120,6 @@ async def new_task(ctx, member: discord.Member, *, task: str):
 
     save_data(active_tasks)
 
-    welcome_msg = (
-        f"🎯 **New Task:** {task_title}\n"
-        f"👤 **Assignee:** {member.mention}\n\n"
-        f"📋 **Details:**\n{task_details}\n\n"
-        "Use **!help_me ** if you need guidance.\n"
-        "I will nag you every 6 hours. To stop me, type **'task complete'** in this thread."
-    )
-
-    await thread.send(welcome_msg)
-
 
 @bot.event
 async def on_message(message):
