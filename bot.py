@@ -140,7 +140,7 @@ async def on_message(message):
     channel_id_str = str(message.channel.id)
     content = message.content.lower()
 
-    if (looks_like_question(content) or message.channel.id == bot_help_channel
+    if (message.channel.id == bot_help_channel
             or isinstance(message.channel,discord.DMChannel)):
 
        await answer_question(msg=message, question=content, details=None)
