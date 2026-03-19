@@ -178,7 +178,6 @@ async def nag_loop():
         last_nagged_at = data.get("last_nagged_at")
         now_ms = int(time.time() * 1000)
 
-        print(f"Checking task {data['task']}: Last nagged {(now_ms - last_nagged_at)//(1000*60)} min ago ")
 
         if last_nagged_at is None:
             last_nagged_at = 0
